@@ -2,62 +2,84 @@
 <html>
 <head>
   <title>Event Check-In Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://unpkg.com/@zxing/library@latest"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    #video { width: 100%; max-width: 400px; border: 1px solid #ccc; }
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    #video { width: 100%; border: 1px solid #ccc; margin-top: 10px; }
     #list { margin-top: 20px; }
-    button { margin: 10px 5px; padding: 10px; }
+    button, select { margin: 10px 5px; padding: 10px; font-size: 16px; }
   </style>
 </head>
 <body>
   <h2>📋 Event Check-In</h2>
-  <video id="video" autoplay></video>
+  <label for="cameraSelect">Choose Camera:</label>
+  <select id="cameraSelect"></select>
+  <video id="video" autoplay muted playsinline></video>
   <div id="list"></div>
   <button onclick="exportExcel()">📤 Export to Excel</button>
   <button onclick="resetList()">🔄 Reset</button>
 
   <script>
-	  const codeReader = new ZXing.BrowserBarcodeReader();
-	  const videoElement = document.getElementById('video');
-	  const listElement = document.getElementById('list');
-	  let scanned = [];
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+    const videoElement = document.getElementById('video');
+    const listElement = document.getElementById('list');
+    const cameraSelect = document.getElementById('cameraSelect');
+    let scanned = [];
 
-	  // Ask for camera permission explicitly
-	  navigator.mediaDevices.getUserMedia({ video: true })
-		.then(() => {
-		  codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
-			if (result) {
-			  const code = result.text;
-			  if (!scanned.includes(code)) {
-				scanned.push(code);
-				const entry = document.createElement('div');
-				entry.textContent = code;
-				listElement.appendChild(entry);
-			  }
-			}
-		  });
-		})
-		.catch(err => {
-		  alert("Camera access denied or unavailable.");
-		  console.error(err);
-		});
+    // Get available video input devices
+    codeReader.listVideoInputDevices().then(devices => {
+      devices.forEach((device, i) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label || `Camera ${i + 1}`;
+        cameraSelect.appendChild(option);
+      });
 
-	  function exportExcel() {
-		const filename = prompt("Enter filename (without .xlsx):", "checkins") || "checkins";
-		const ws = XLSX.utils.aoa_to_sheet(scanned.map(code => [code]));
-		const wb = XLSX.utils.book_new();
-		XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-		XLSX.writeFile(wb, `${filename}.xlsx`);
-	  }
+      // Start with first camera
+      if (devices.length > 0) {
+        startScanner(devices[0].deviceId);
+      }
 
-	  function resetList() {
-		if (confirm("Clear all scanned data?")) {
-		  scanned = [];
-		  listElement.innerHTML = "";
-		}
-	  }
-	</script>
+      // Change camera on selection
+      cameraSelect.onchange = () => {
+        codeReader.reset();
+        startScanner(cameraSelect.value);
+      };
+    }).catch(err => {
+      alert("Camera access denied or unavailable.");
+      console.error(err);
+    });
+
+    function startScanner(deviceId) {
+      codeReader.decodeFromVideoDevice(deviceId, videoElement, (result, err) => {
+        if (result) {
+          const code = result.text;
+          if (!scanned.includes(code)) {
+            scanned.push(code);
+            const entry = document.createElement('div');
+            entry.textContent = code;
+            listElement.appendChild(entry);
+          }
+        }
+      });
+    }
+
+    function exportExcel() {
+      const filename = prompt("Enter filename (without .xlsx):", "checkins") || "checkins";
+      const ws = XLSX.utils.aoa_to_sheet(scanned.map(code => [code]));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+      XLSX.writeFile(wb, `${filename}.xlsx`);
+    }
+
+    function resetList() {
+      if (confirm("Clear all scanned data?")) {
+        scanned = [];
+        listElement.innerHTML = "";
+      }
+    }
+  </script>
 </body>
 </html>
