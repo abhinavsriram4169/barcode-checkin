@@ -6,20 +6,71 @@
   <script src="https://unpkg.com/@zxing/library@latest"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    #video { width: 100%; border: 1px solid #ccc; margin-top: 10px; }
-    #list { margin-top: 20px; }
-    button, select { margin: 10px 5px; padding: 10px; font-size: 16px; }
+    body {
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      background-color: #d4f8d4; /* Light green */
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    #video {
+      width: 100%;
+      border: 2px solid #2ecc71;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    #cameraSelect {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+    #list {
+      margin-top: 20px;
+      background: #fff;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .button-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    .button-row button {
+      width: 48%;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: #2ecc71;
+      color: white;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      transition: background-color 0.3s ease;
+    }
+    .button-row button:hover {
+      background-color: #27ae60;
+    }
   </style>
 </head>
 <body>
   <h2>📋 Event Check-In</h2>
-  <label for="cameraSelect">Choose Camera:</label>
   <select id="cameraSelect"></select>
   <video id="video" autoplay muted playsinline></video>
   <div id="list"></div>
-  <button onclick="exportExcel()">📤 Export to Excel</button>
-  <button onclick="resetList()">🔄 Reset</button>
+  <div class="button-row">
+    <button onclick="exportExcel()">📤 Export to Excel</button>
+    <button onclick="resetList()">🔄 Reset</button>
+  </div>
 
   <script>
     const codeReader = new ZXing.BrowserMultiFormatReader();
@@ -28,7 +79,6 @@
     const cameraSelect = document.getElementById('cameraSelect');
     let scanned = [];
 
-    // Get available video input devices
     codeReader.listVideoInputDevices().then(devices => {
       devices.forEach((device, i) => {
         const option = document.createElement('option');
@@ -37,12 +87,10 @@
         cameraSelect.appendChild(option);
       });
 
-      // Start with first camera
       if (devices.length > 0) {
         startScanner(devices[0].deviceId);
       }
 
-      // Change camera on selection
       cameraSelect.onchange = () => {
         codeReader.reset();
         startScanner(cameraSelect.value);
@@ -67,7 +115,10 @@
     }
 
     function exportExcel() {
-      const filename = prompt("Enter filename (without .xlsx):", "checkins") || "checkins";
+      const today = new Date();
+      const dateStr = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth()+1).toString().padStart(2, '0')}-${today.getFullYear()}`;
+      const defaultName = `checkins-${dateStr}`;
+      const filename = prompt("Enter filename (without .xlsx):", defaultName) || defaultName;
       const ws = XLSX.utils.aoa_to_sheet(scanned.map(code => [code]));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
