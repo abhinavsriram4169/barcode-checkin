@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Event Check-In Scanner</title>
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #video { width: 100%; max-width: 400px; border: 1px solid #ccc; }
+    #list { margin-top: 20px; }
+    button { margin: 10px 5px; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h2>📋 Event Check-In</h2>
+  <video id="video" autoplay></video>
+  <div id="list"></div>
+  <button onclick="exportExcel()">📤 Export to Excel</button>
+  <button onclick="resetList()">🔄 Reset</button>
+
+  <script>
+	  const codeReader = new ZXing.BrowserBarcodeReader();
+	  const videoElement = document.getElementById('video');
+	  const listElement = document.getElementById('list');
+	  let scanned = [];
+
+	  // Ask for camera permission explicitly
+	  navigator.mediaDevices.getUserMedia({ video: true })
+		.then(() => {
+		  codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
+			if (result) {
+			  const code = result.text;
+			  if (!scanned.includes(code)) {
+				scanned.push(code);
+				const entry = document.createElement('div');
+				entry.textContent = code;
+				listElement.appendChild(entry);
+			  }
+			}
+		  });
+		})
+		.catch(err => {
+		  alert("Camera access denied or unavailable.");
+		  console.error(err);
+		});
+
+	  function exportExcel() {
+		const filename = prompt("Enter filename (without .xlsx):", "checkins") || "checkins";
+		const ws = XLSX.utils.aoa_to_sheet(scanned.map(code => [code]));
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+		XLSX.writeFile(wb, `${filename}.xlsx`);
+	  }
+
+	  function resetList() {
+		if (confirm("Clear all scanned data?")) {
+		  scanned = [];
+		  listElement.innerHTML = "";
+		}
+	  }
+	</script>
+</body>
+</html>
